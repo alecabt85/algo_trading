@@ -80,8 +80,8 @@ def data_end_to_end(target_file, feature_file, target_col, holdout, test_size):
 
     return train_x, test_x, train_y, test_y, val_x, val_y
 
-def predict_stock(models, 
-                  package,
+def predict_stock(package,
+                  model_grid, 
                   holdout,
                   target_columns, 
                   output_dir,
@@ -89,8 +89,10 @@ def predict_stock(models,
     #iterate over all stocks and categorical targets and model, capture outputs
     results = []
     failures = []
+    target_files = package[0]
+    data_files = package[1]
     for tgt_col in target_columns:
-        for targets, data in package:
+        for targets, data in zip(target_files, data_files):
             try:
                 stock = targets.split('_')[0]
                 target_file = os.path.join(interim_dir, targets)
@@ -101,7 +103,7 @@ def predict_stock(models,
                                                                                 holdout,
                                                                                 test_size=.33)
                 #iterate over models train and capture results
-                for model in models:
+                for model in model_grid:
                     pipe = Pipeline([('scaler',StandardScaler()),
                                     ('dim_reduction', PCA(n_components=.95)),
                                     ('classifier', model)])
@@ -147,7 +149,7 @@ if __name__ == "__main__":
     feature_files = [x for x in os.listdir(INTERIM_DIR) if "indicators" in x]
     target_files = [x for x in os.listdir(INTERIM_DIR) if "targets" in x]
     HOLDOUT = 100
-    CHUNK_SIZE = 100
+    CHUNK_SIZE = 5
     WORKERS = 20
     
     #read in a target file to get target columns
@@ -183,7 +185,7 @@ if __name__ == "__main__":
 
     #make partial function
     run_models = partial(predict_stock, 
-                         models=models, 
+                         model_grid=models, 
                          holdout=HOLDOUT,
                          target_columns=target_columns,
                          output_dir=OUTPUT_DIR,
